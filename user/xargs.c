@@ -1,46 +1,82 @@
 #include "kernel/types.h"
-#include "kernel/fcntl.h"
 #include "user/user.h"
+#include "kernel/fcntl.h"
+#include "kernel/param.h"
 
-#define MAXARGS 10
+#define MAX_ARG_LEN 512
 
-int main(int argc, char *argv[]) {
-    char *args[MAXARGS];
-    char line[512];
-    int i;
+void
+copy_argv(char **ori_argv, int ori_argc, char *new_argv, char **argv)
+{
+  int k = 0;
+  for (int i = 0; i < ori_argc; i++) {
+    argv[k] = malloc(strlen(ori_argv[i]) + 1);
+    memcpy(argv[k++], ori_argv[i], strlen(ori_argv[i]) + 1);
+  }
+  argv[k] = malloc(strlen(new_argv) + 1);
+  memcpy(argv[k++], new_argv, strlen(new_argv) + 1);
+}
 
-    // Check for correct usage
-    if(argc < 2) {
-        fprintf(2, "Usage: xargs command\n");
-        exit(1);
+
+void
+print(char **s, int n)
+{
+  for (int i = 0; i < n; i++) {
+    printf("%s\n", s[i]);
+  }
+}
+
+int 
+main(int argc, char *argv[])
+{
+  if (argc <= 1) {
+    fprintf(2, "Usage: xargx command [arg ...]\n");
+    exit(1);
+  }
+
+  char param[MAX_ARG_LEN];
+  int i = 0;
+  char ch;
+  int ignore = 0;
+  while (read(0, &ch, 1) > 0) {
+    if (ch == '\n') {
+      if (ignore) {
+        i = 0;
+        ignore = 0;
+        continue;
+      }
+      param[i] = 0;
+      i = 0;
+
+      int pid = fork();
+      if (pid == 0) {
+        //child
+        int cmd_argc = argc;
+        
+        char *cmd_argv[MAXARG];
+
+        copy_argv(argv + 1, argc - 1, param, cmd_argv);
+        cmd_argv[cmd_argc] = 0;
+        
+        exec(cmd_argv[0], cmd_argv);
+
+        exit(0);
+      } else {
+        wait((int *)0);
+      }
+      
+    } else {
+      
+      if (!ignore && i >= MAX_ARG_LEN - 1) {
+        printf("xargs: too long arguments...\n");
+        ignore = 1;
+      }
+
+      if (!ignore) {
+        param[i++] = ch;
+      }
     }
+  }
 
-    // Prepare the command to run
-    for(i = 1; i < argc && i < MAXARGS - 1; i++) {
-        args[i - 1] = argv[i];
-    }
-
-    // Read lines from the standard input
-    while(gets(line, sizeof(line))) {
-        // Remove newline character
-        char *newline = strchr(line, '\n');
-        if(newline) {
-            *newline = 0;
-        }
-
-        // Append the line to the command's arguments
-        args[i - 1] = line;
-        args[i] = 0;
-
-        // Run the command
-        if(fork() == 0) {
-            exec(args[0], args);
-            fprintf(2, "xargs: failed to execute %s\n", args[0]);
-            exit(1);
-        } else {
-            wait((int*)0);
-        }
-    }
-
-    exit(0);
+  exit(0);
 }
