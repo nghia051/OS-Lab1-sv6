@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
     for (int i = 2; i <= 35; i++) {
       write(p[1], &i, sizeof(i));
     }
-    close(p[1]);
+    close(p[1]); 
     exit(0);
   } else {
     close(p[1]);

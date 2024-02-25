@@ -11,9 +11,9 @@ main(int argc, char *argv[])
         char c;
         read(p[0], &c, 1);
         printf("%d: received ping\n", getpid());
-        write(p[1], "c", 1);
+        write(p[1], "x", 1);
     } else {
-        write(p[1], "c", 1);
+        write(p[1], "y", 1);
         char c;
         read(p[0], &c, 1);
         printf("%d: received pong\n", getpid());
